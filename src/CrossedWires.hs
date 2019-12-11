@@ -59,6 +59,9 @@ det [a, b, c, d] = a * d - b * c
 delta :: (Point2D -> Float) -> Line -> Float
 delta f line = f (fst line) - f (snd line)
 
+magnitude :: Line -> Float
+magnitude (p1, p2) = sqrt $ norm (p2 `minus` p1)
+
 intersectLine :: Line -> Line -> Maybe Point2D
 intersectLine ab pq = case denom of
   0 -> Nothing -- Parallel Lines
