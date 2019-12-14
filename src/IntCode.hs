@@ -8,12 +8,15 @@
 
 module IntCode
   ( readIntcode
+  , answer
   , run
   )
 where
 
 import           Data.Map.Strict               as M
 import           Data.Maybe
+import           System.IO
+import           Data.List.Split
 
 type InstructionPointer = Int
 
@@ -64,3 +67,29 @@ execute program (Multiply, a, b, address) = M.insert address (a * b) program
 
 halt :: Program -> Intcode
 halt program = M.elems program
+
+computePair :: Int -> [Int] -> (Int, Int)
+computePair target d2_data = computePair'
+  [ (n, v) | n <- [0 .. 99], v <- [0 .. 99] ]
+ where
+  computePair' []       = (-1, -1)
+  computePair' (x : xs) = case evaluate target x d2_data of
+    True  -> x
+    False -> computePair' xs
+
+evaluate :: Int -> (Int, Int) -> [Int] -> Bool
+evaluate target x d2_data = (head $ run 0 $ prepareData x) == target
+ where
+  prepareData (n, v) =
+    readIntcode $ head d2_data : [n, v] ++ (Prelude.drop 3 d2_data)
+
+answer :: IO ()
+answer = do
+  d2_data <- parseData "data/d2_input.txt"
+  putStrLn
+    $  "Day 2, Part 1 Answer: "
+    ++ (show $ head $ run 0 $ readIntcode d2_data)
+  putStrLn $ "Day 2, Part 2 Answer: " ++ (show $ computePair 19690720 d2_data)
+ where
+  parseData file =
+    readFile file >>= return <$> Prelude.map (read) . (splitOn ",")

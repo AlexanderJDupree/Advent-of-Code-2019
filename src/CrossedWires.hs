@@ -26,10 +26,13 @@ module CrossedWires
   , calcMinSteps
   , calcSteps
   , projection
+  , answer
   )
 where
 
 import           Control.Monad                  ( foldM )
+import           System.IO
+import           Data.List.Split
 import           Data.Set                       ( Set )
 import qualified Data.Set                      as Set
 
@@ -154,3 +157,21 @@ isBetween :: Line -> Point2D -> Bool
 isBetween (a, b) c
   | (magnitude (a, c)) + (magnitude (c, b)) == (magnitude (a, b)) = True
   | otherwise = False
+
+
+parseData :: FilePath -> IO [[Movement]]
+parseData file = readFile file >>= return <$> map (parseLine) . lines
+ where
+  parseLine = map (readMovement) . (splitOn ",")
+  readMovement str = case str of
+    'R' : rest -> R (read rest :: Float)
+    'L' : rest -> L (read rest :: Float)
+    'U' : rest -> U (read rest :: Float)
+    'D' : rest -> D (read rest :: Float)
+
+answer :: IO ()
+answer = do
+  [path1, path2] <- parseData "data/d3_input.txt"
+  putStrLn $ "Day 3, Part 1 Answer: " ++ (show $ calcMinDistance path1 path2)
+  putStrLn $ "Day 3, Part 2 Answer: " ++ (show $ calcMinSteps path1 path2)
+
