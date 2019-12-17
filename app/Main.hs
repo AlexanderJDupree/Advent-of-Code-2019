@@ -12,6 +12,7 @@ import           FuelCount                     as D1
 import           IntCode                       as D2
 import           CrossedWires                  as D3
 import           SecureContainer               as D4
+import           IntCode2                      as D5
 
 main :: IO ()
 main = do
@@ -19,3 +20,4 @@ main = do
   D2.answer
   D3.answer
   D4.answer
+  D5.answer
