@@ -26,7 +26,7 @@ type Tape = [Int]
 type Address = Int
 type Intcode = M.Map Address Int
 
-data OpCode = Halt | Add | Multiply | Input | Output
+data OpCode = Halt | Add | Multiply | Input | Output |JIT | JIF | Less | Equals
     deriving ( Show, Eq, Ord )
 
 data ParameterMode = Immediate | Position
@@ -41,15 +41,16 @@ opcode n = case n of
   2  -> Multiply
   3  -> Input
   4  -> Output
+  5  -> JIT
+  6  -> JIF
+  7  -> Less
+  8  -> Equals
   _  -> Halt
 
 parameterMode :: Int -> ParameterMode
 parameterMode n = case n of
   0 -> Position
   1 -> Immediate
-
-incrementIP :: InstructionPointer -> InstructionPointer
-incrementIP ip = ip + 4
 
 readIP :: InstructionPointer -> Intcode -> Maybe Instruction
 readIP ip program = do
@@ -82,6 +83,10 @@ evalDigits (ones : tens : rest) =
     Multiply -> (Multiply, evalDigits' $ init rest)
     Input    -> (Input,  [Immediate])
     Output   -> (Output, [Immediate])
+    JIT      -> (JIT, init $ evalDigits' $ take 2 rest)
+    JIF      -> (JIF, init $ evalDigits' $ take 2 rest)
+    Less     -> (Less, evalDigits' $ init rest)
+    Equals   -> (Equals, evalDigits' $ init rest)
  where
   evalDigits' []       = Immediate : []
   evalDigits' (n : ns) = parameterMode n : evalDigits' ns
@@ -101,27 +106,39 @@ run ip program = eval $ readIP ip program
   eval (Just (Halt, _)) = return $ halt program
   eval Nothing          = return $ halt program
   eval (Just (opcode, args))  = do
-    result <- execute' (opcode, args)
-    run (ip + length args + 1) result
+    (pointer, program) <- execute' (opcode, args) ip
+    run pointer program
 
-execute :: Intcode -> Instruction -> IO Intcode
-execute program (Halt, _) = pure $ program
+execute :: Intcode -> Instruction -> InstructionPointer -> IO (InstructionPointer, Intcode)
+execute program (Halt, _) ip = pure $ (ip, program)
 
-execute program (Add, args) =
-  pure $ M.insert (last args) (foldr (+) 0 $ init args) program
+execute program (Add, args) ip =
+  pure $ (ip + length args + 1, M.insert (last args) (foldr (+) 0 $ init args) program)
 
-execute program (Multiply, args) =
-  pure $ M.insert (last args) (foldr (*) 1 $ init args) program
+execute program (Multiply, args) ip =
+  pure $ (ip + length args + 1, M.insert (last args) (foldr (*) 1 $ init args) program)
 
-execute program (Input, [address]) = do 
+execute program (Input, [address]) ip = do 
+  putStr "> " >> hFlush stdout
   val <- getLine
-  pure $ M.insert address (read val :: Int) program
+  pure $ (ip + 2, M.insert address (read val :: Int) program)
 
-execute program (Output, [address]) = do 
+execute program (Output, [address]) ip = do 
   case M.lookup address program of
     Just n  -> putStrLn $ show n
     Nothing -> (putStrLn $ "No value at address: " ++ (show address))
-  pure $ program
+  pure $ (ip + 2, program)
+
+execute program (JIT, (a:b:rest)) ip = if a > 0 then pure $ (b, program) else pure $ (ip + 3, program)
+execute program (JIF, (a:b:rest)) ip = if a == 0 then pure $ (b, program) else pure $ (ip + 3, program)
+
+execute program (Less, (a:b:address:rest)) ip = case a < b of
+  True  -> pure $ (ip + 4, M.insert address 1 program)
+  False -> pure $ (ip + 4, M.insert address 0 program)
+
+execute program (Equals, (a:b:address:rest)) ip = case a == b of
+  True  -> pure $ (ip + 4, M.insert address 1 program)
+  False -> pure $ (ip + 4, M.insert address 0 program)
 
 halt :: Intcode -> Tape
 halt program = M.elems program
@@ -131,6 +148,8 @@ answer = do
   d5_data <- parseData "data/d5_input.txt" :: IO [Int]
   run 0 $ readTape d5_data
   putStrLn "Day 5, Part 1 Finished"
+  run 0 $ readTape d5_data
+  putStrLn "Day 5, Part 2 Finished"
  where
   parseData file =
     readFile file >>= return <$> Prelude.map (read) . (splitOn ",")
