@@ -14,3 +14,6 @@ My goals for this challenge is:
 - Complete the challenge before the new year. 
 - Gain a better understanding of functional programming, and problem solving in Haskell
 
+## Post-Mortem
+
+Unfortunately, I was unable to complete this challenge. Juggling family, work, school, and the holidays all while learning the Haskell language lead me to put this challenge on the shelf. Hopefully I'll be able to revisit some of the challenges later, or at the least finish advent of code 2020. 
